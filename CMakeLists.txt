@@ -11,6 +11,11 @@ if(NOT plutovg_FOUND)
     add_subdirectory(plutovg)
 endif()
 
+
+option(LUNASVG_BUILD_FUZZERS "Enable builds for fuzz testing" OFF)
+
+include(cmake/fuzzing.cmake)
+
 set(lunasvg_sources
     source/lunasvg.cpp
     source/graphics.cpp
@@ -62,6 +67,7 @@ target_compile_definitions(lunasvg PRIVATE LUNASVG_BUILD)
 if(NOT BUILD_SHARED_LIBS)
     target_compile_definitions(lunasvg PUBLIC LUNASVG_BUILD_STATIC)
 endif()
+decorate_target(lunasvg)
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(
@@ -108,4 +114,22 @@ export(EXPORT lunasvgTargets
 option(LUNASVG_BUILD_EXAMPLES "Build examples" ON)
 if(LUNASVG_BUILD_EXAMPLES)
     add_subdirectory(examples)
+endif()
+
+# To enable fuzzing, configure cmake with:
+#
+#   cmake -B build -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLUNASVG_BUILD_FUZZERS=ON -DSANITIZE_ADDRESS=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .
+#   cmake --build build
+#
+# Build, then run the fuzzer with:
+#
+#    ./build/svg_fuzzer ...
+if(LUNASVG_BUILD_FUZZERS)
+  add_executable(svg_fuzzer fuzzing/svg_fuzzer.cpp)
+
+  target_link_libraries(svg_fuzzer PRIVATE
+      lunasvg::lunasvg
+  )
+
+  DECORATE_FUZZER(svg_fuzzer)
 endif()
